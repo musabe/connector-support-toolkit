@@ -1,0 +1,68 @@
+# connector-support-toolkit — sample commands
+# Run from the repo root: python -m src.connector_check <flags>
+
+# ── PostgreSQL ────────────────────────────────────────────────────────────────
+
+# Basic check (terminal output only)
+python -m src.connector_check \
+  --host localhost --port 5432 \
+  --db mydb --user myuser --password mypassword \
+  --db-type postgres
+
+# Save a JSON report alongside terminal output
+python -m src.connector_check \
+  --host localhost --port 5432 \
+  --db mydb --user myuser --password mypassword \
+  --db-type postgres \
+  --output-file report.json
+
+# Skip CDC and JDBC checks (connectivity + permissions only)
+python -m src.connector_check \
+  --host localhost --port 5432 \
+  --db mydb --user myuser --password mypassword \
+  --db-type postgres \
+  --skip cdc,jdbc
+
+# Against the local Docker container (port 5435, demo credentials)
+python -m src.connector_check \
+  --host localhost --port 5435 \
+  --db test --user demo --password demo \
+  --db-type postgres
+
+# ── MySQL ─────────────────────────────────────────────────────────────────────
+
+# Basic check
+python -m src.connector_check \
+  --host localhost --port 3306 \
+  --db mydb --user myuser --password mypassword \
+  --db-type mysql
+
+# Save a JSON report
+python -m src.connector_check \
+  --host localhost --port 3306 \
+  --db mydb --user myuser --password mypassword \
+  --db-type mysql \
+  --output-file report.json
+
+# Skip JDBC checks only
+python -m src.connector_check \
+  --host localhost --port 3306 \
+  --db mydb --user myuser --password mypassword \
+  --db-type mysql \
+  --skip jdbc
+
+# Against the local Docker container (demo credentials)
+python -m src.connector_check \
+  --host localhost --port 3306 \
+  --db test --user demo --password demo \
+  --db-type mysql
+
+# ── Notes ─────────────────────────────────────────────────────────────────────
+# --skip accepts a comma-separated list of categories: connectivity,permissions,cdc,jdbc
+# --output-file writes a JSON report with fields:
+#   timestamp  — ISO 8601 UTC (e.g. 2026-05-02T10:00:00+00:00)
+#   host       — value passed to --host
+#   db_type    — postgres | mysql
+#   summary    — { passed, warned, failed, skipped }
+#   checks[]   — [ { category, name, status, detail } ]
+# Connectivity failure automatically skips permissions, cdc, and jdbc checks
