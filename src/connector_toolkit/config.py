@@ -213,6 +213,7 @@ def to_run_config(data: dict, overrides: Optional[dict] = None) -> RunConfig:
         skip=_parse_skip(merged),
         output_file=merged.get("output_file") or None,
         timeout=_cast_int(merged, "timeout", 10),
+        verbose=bool(merged.get("verbose", False)),
     )
 
 

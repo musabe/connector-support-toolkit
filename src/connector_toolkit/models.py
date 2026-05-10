@@ -27,6 +27,8 @@ class CheckResult:
     status: Status
     detail: str = ""
     remediation: Optional[str] = None
+    duration_ms: Optional[int] = None     # how long this check took
+    exception: Optional[str] = None       # full traceback in verbose mode
 
     def passed(self) -> bool:
         return self.status == Status.PASS
@@ -43,6 +45,10 @@ class CheckResult:
         }
         if self.remediation:
             d["remediation"] = self.remediation
+        if self.duration_ms is not None:
+            d["duration_ms"] = self.duration_ms
+        if self.exception:
+            d["exception"] = self.exception
         return d
 
 
@@ -91,6 +97,7 @@ class RunConfig:
     skip: list[Category] = field(default_factory=list)
     output_file: Optional[str] = None
     timeout: int = 10
+    verbose: bool = False                 # show timing + full tracebacks
 
 
 @dataclass
@@ -99,12 +106,16 @@ class RunReport:
     results: list[CheckResult]
     summary: Summary
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    total_duration_ms: Optional[int] = None
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "timestamp": self.timestamp.isoformat(),
             "host": self.config.host,
             "db_type": self.config.db_type,
             "summary": self.summary.to_dict(),
             "checks": [r.to_dict() for r in self.results],
         }
+        if self.total_duration_ms is not None:
+            d["total_duration_ms"] = self.total_duration_ms
+        return d

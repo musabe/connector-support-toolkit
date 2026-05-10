@@ -109,6 +109,12 @@ def _add_run_args(p: argparse.ArgumentParser) -> None:
         metavar="SECONDS",
         help="Connection timeout in seconds (default: 10)",
     )
+    p.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        default=False,
+        help="Show per-check timing, connection parameters, and full tracebacks on failure",
+    )
 
 
 def _build_config_from_args(args: argparse.Namespace) -> RunConfig:
@@ -137,6 +143,7 @@ def _build_config_from_args(args: argparse.Namespace) -> RunConfig:
         skip=_parse_skip(args.skip or ""),
         output_file=args.output_file,
         timeout=args.timeout or 10,
+        verbose=getattr(args, "verbose", False),
     )
 
 
@@ -152,6 +159,7 @@ def _run_command(args: argparse.Namespace) -> None:
                 "db_type":     args.db_type,
                 "output_file": args.output_file,
                 "timeout":     args.timeout,
+                "verbose":     True if args.verbose else None,
                 "skip": (
                     [s.strip() for s in args.skip.split(",") if s.strip()]
                     if args.skip else None
