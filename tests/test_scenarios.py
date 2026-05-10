@@ -195,12 +195,11 @@ class TestPgUnreachable:
             "postgres", "nonexistent-db-host.internal", 5432,
             "demo", "demo", skip=[]
         )
-        # When connectivity fails, downstream categories are skipped.
-        # skipped_category() returns a single result with the category name
-        # as the check name (e.g. "permissions", "cdc", "jdbc").
-        assert checks.get("permissions") == "SKIP" or checks.get("Replication privilege") == "SKIP"
-        assert checks.get("cdc") == "SKIP" or checks.get("wal_level") == "SKIP"
-        assert checks.get("jdbc") == "SKIP" or checks.get("Driver version") == "SKIP"
+        # When connectivity fails, skipped_category() returns one result per
+        # category using the category name as the check name.
+        assert checks.get("permissions") == "SKIP"
+        assert checks.get("cdc") == "SKIP"
+        assert checks.get("jdbc") == "SKIP"
 
     def test_exit_code_is_fail(self):
         config = RunConfig(
