@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connector check — localhost (postgres)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 14px; color: #1f2328; background: #f6f8fa; padding: 24px; }
+  .card { background: #fff; border: 1px solid #d0d7de; border-radius: 8px;
+           max-width: 960px; margin: 0 auto; overflow: hidden; }
+  .header { padding: 20px 24px; border-bottom: 1px solid #d0d7de; }
+  .header h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .header .meta { font-size: 12px; color: #656d76; }
+  .summary-bar { display: flex; gap: 24px; padding: 14px 24px;
+                  border-bottom: 1px solid #d0d7de; background: #f6f8fa; }
+  .summary-item { display: flex; align-items: center; gap: 6px;
+                   font-size: 13px; font-weight: 500; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-pass { background: #1a7f37; }
+  .dot-warn { background: #bf8700; }
+  .dot-fail { background: #cf222e; }
+  .dot-skip { background: #6e7781; }
+  .total-timing { font-size: 12px; color: #656d76; margin-left: auto; align-self: center; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 8px 16px; vertical-align: top; border-bottom: 1px solid #f0f0f0; }
+  .category-header td { background: #f6f8fa; font-weight: 600; font-size: 11px;
+                          text-transform: uppercase; letter-spacing: 0.06em;
+                          color: #656d76; padding: 10px 16px 6px; }
+  .status-cell { width: 100px; white-space: nowrap; }
+  .name-cell { width: 220px; font-weight: 500; }
+  .detail-cell { color: #656d76; font-family: ui-monospace, monospace; font-size: 12px; }
+  .fix-cell { font-size: 12px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px;
+            font-size: 12px; font-weight: 600; }
+  .remediation { margin-top: 4px; color: #656d76; font-family: ui-monospace, monospace;
+                   white-space: pre-wrap; word-break: break-word; }
+  .exception { margin-top: 6px; padding: 8px; background: #fff5f5; border: 1px solid #ffcdd2;
+                border-radius: 4px; color: #c62828; font-size: 11px; overflow-x: auto; }
+  .timing { font-size: 11px; color: #939fa9; font-weight: 400; margin-left: 4px; }
+  .footer { padding: 12px 24px; font-size: 11px; color: #939fa9;
+             border-top: 1px solid #d0d7de; background: #f6f8fa; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0d1117; color: #c9d1d9; }
+    .card { background: #161b22; border-color: #30363d; }
+    .header .meta, .detail-cell, .total-timing, .timing { color: #8b949e; }
+    .summary-bar, .category-header td, .footer { background: #1c2128; }
+    .category-header td { color: #8b949e; }
+    td { border-bottom-color: #21262d; }
+    .remediation { color: #8b949e; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Connector readiness check</h1>
+    <div class="meta">postgres://demo:***@localhost:5435/test &nbsp;·&nbsp; 2026-05-10 19:33:15 UTC</div>
+  </div>
+  <div class="summary-bar">
+    <div class="summary-item"><span class="dot dot-pass"></span>10 passed</div>
+    <div class="summary-item"><span class="dot dot-warn"></span>0 warned</div>
+    <div class="summary-item"><span class="dot dot-fail"></span>0 failed</div>
+    <div class="summary-item"><span class="dot dot-skip"></span>0 skipped</div>
+    <span class="total-timing">  43ms total</span>
+  </div>
+  <table>
+    
+        <tr class="category-header">
+          <td colspan="4">CONNECTIVITY</td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">TCP reachability </td>
+          <td class="detail-cell">host=localhost port=5435</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">Authenticated connect </td>
+          <td class="detail-cell">latency=32ms</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">SSL </td>
+          <td class="detail-cell">in use: no</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="category-header">
+          <td colspan="4">PERMISSIONS</td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">Replication privilege </td>
+          <td class="detail-cell">rolreplication=True</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">Superuser status </td>
+          <td class="detail-cell">superuser</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">Database read access </td>
+          <td class="detail-cell">CONNECT privilege: True</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="category-header">
+          <td colspan="4">CDC</td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">wal_level </td>
+          <td class="detail-cell">wal_level=logical</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">Replication slots </td>
+          <td class="detail-cell">active slots=0</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">wal_sender_timeout </td>
+          <td class="detail-cell">wal_sender_timeout=1min</td>
+          <td class="fix-cell"></td>
+        </tr>
+        <tr class="category-header">
+          <td colspan="4">JDBC</td>
+        </tr>
+        <tr class="check-row status-pass">
+          <td class="status-cell">
+            <span class="badge" style="color:#1a7f37;background:#dafbe1">
+              ✔ PASS
+            </span>
+          </td>
+          <td class="name-cell">Driver version </td>
+          <td class="detail-cell">psycopg2==2.9.12 (dt dec pq3 ext lo64)</td>
+          <td class="fix-cell"></td>
+        </tr>
+  </table>
+  <div class="footer">
+    Generated by connector-support-toolkit &nbsp;·&nbsp;
+    10 checks across 4 categories
+  </div>
+</div>
+</body>
+</html>

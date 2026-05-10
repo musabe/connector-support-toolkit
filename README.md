@@ -2,12 +2,12 @@
 
 > CLI tool to validate database connector readiness for PostgreSQL, MySQL, MongoDB, and Redshift —
 > runs connectivity, permissions, CDC, and driver checks and reports results in the
-> terminal or as a JSON file.
+> terminal, JSON, or HTML.
 
 ![Language](https://img.shields.io/badge/language-Python-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Status](https://img.shields.io/badge/status-active-brightgreen?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-174%20passed-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-211%20passed-brightgreen?style=flat-square)
 ![CI](https://github.com/musabe/connector-support-toolkit/actions/workflows/ci.yml/badge.svg)
 ![Integration](https://github.com/musabe/connector-support-toolkit/actions/workflows/integration.yml/badge.svg)
 
@@ -198,7 +198,7 @@ python -m src.connector_check [run] [--config PATH] [--host HOST] [--port PORT]
                                [--db DB] [--user USER] [--password PASSWORD]
                                [--db-type {postgres,mysql,mongo,redshift}]
                                [--skip CATEGORIES] [--output-file PATH]
-                               [--timeout SECONDS]
+                               [--timeout SECONDS] [--verbose]
 
 python -m src.connector_check compare BEFORE AFTER [--output-file PATH]
 
@@ -212,8 +212,9 @@ Arguments:
   --db-type              One of: postgres, mysql, mongo, redshift
   --skip CATEGORIES      Comma-separated categories to skip:
                          connectivity,permissions,cdc,jdbc
-  --output-file PATH     Write JSON report to file instead of terminal
+  --output-file PATH     Write report to file — .json for JSON, .html for HTML
   --timeout SECONDS      Connection timeout in seconds (default: 10)
+  --verbose, -v          Show per-check timing, connection params, full tracebacks
 ```
 
 ---
@@ -261,7 +262,44 @@ Downstream categories are automatically skipped until connectivity is restored.
 
 ![FAIL with remediation hint](docs/screenshots/fail-remediation.png)
 
-### JSON (`--output-file report.json`)
+### Verbose mode (`--verbose` / `-v`)
+
+Shows connection parameters (password masked), per-check timing, and full
+tracebacks on failure — useful for diagnosing slow queries or unclear errors:
+
+```bash
+python -m src.connector_check --config toolkit.yml --verbose
+```
+
+![Verbose mode output](docs/screenshots/postgres-verbose.png)
+
+### HTML report (`--output-file report.html`)
+
+Produces a self-contained single-file HTML report viewable in any browser —
+no external dependencies, dark mode support, shareable as an attachment:
+
+```bash
+python -m src.connector_check --config toolkit.yml --output-file report.html
+```
+
+![HTML report](docs/screenshots/html-report.png)
+
+The file extension determines the format — `.json` for JSON, `.html` for HTML.
+
+### Incident scenarios
+
+Pre-built configs in `scenarios/` simulate real support escalations:
+
+```bash
+# Start misconfigured containers
+docker compose -f docker/docker-compose-scenarios.yml up -d
+
+# Run a scenario
+python -m src.connector_check --config scenarios/pg-no-replication.yml
+python -m src.connector_check --config scenarios/mysql-binlog-off.yml
+```
+
+See [`scenarios/README.md`](scenarios/README.md) for the full scenario reference.
 
 ```json
 {
@@ -357,8 +395,9 @@ pytest tests/
 ```
 
 Tests use mock connections — no live database required for the unit test suite.
-174 tests across 11 files covering all four connectors, reporters, diff engine,
-config loading, exit codes, CLI parsing, and runner orchestration.
+211 tests across 11 files covering all four connectors, reporters, diff engine,
+config loading, exit codes, CLI parsing, runner orchestration, verbose mode,
+timing, and HTML output.
 
 ### Docker integration environment
 
@@ -423,10 +462,14 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide and PR checklist.
 | Redshift checks (connectivity, permissions, CDC, JDBC) | ✅ Done |
 | Remediation hints on all FAIL / WARN results | ✅ Done |
 | JSON report output | ✅ Done |
+| HTML report export (`--output-file report.html`) | ✅ Done |
 | Report diff / compare subcommand | ✅ Done |
 | YAML config file with env-var interpolation | ✅ Done |
 | Exit codes for CI/CD gating (0/1/2/3) | ✅ Done |
+| Verbose mode with per-check timing (`--verbose`) | ✅ Done |
 | Pluggable connector + reporter architecture | ✅ Done |
+| GitHub Actions CI pipeline (unit + integration) | ✅ Done |
+| Incident scenarios (8 configs + Docker containers) | ✅ Done |
 | Docker integration test environment | ✅ Done |
 | Snowflake connector | 🔜 Planned |
 
@@ -438,4 +481,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide and PR checklist.
 Senior Technical Support Engineer
 Focused on API-driven SaaS, data integration, and developer-facing support
 
-[github.com/mabella1](https://github.com/musabe)
+[github.com/musabe](https://github.com/musabe)
