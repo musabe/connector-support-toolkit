@@ -8,7 +8,7 @@ level so tests run without pymongo installed.
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 import sys
 
 import pytest
@@ -25,13 +25,11 @@ class _FakeOperationFailure(Exception):
         self.code = code
 
 
-# Patch pymongo.errors into sys.modules so 'from pymongo.errors import ...' works
 _fake_errors_mod = MagicMock()
 _fake_errors_mod.OperationFailure = _FakeOperationFailure
 sys.modules.setdefault("pymongo", MagicMock())
 sys.modules["pymongo.errors"] = _fake_errors_mod
 
-# Also patch into mongo.py's module namespace so isinstance checks resolve
 import connector_toolkit.checks.mongo as _mongo_mod
 _mongo_mod.OperationFailure = _FakeOperationFailure
 
@@ -52,10 +50,40 @@ def connector(config):
 
 
 def _attach_mock_client(connector) -> MagicMock:
-    """Attach a MagicMock MongoClient to the connector and return it."""
+    """Attach a basic MagicMock MongoClient to the connector and return it."""
     client = MagicMock()
     connector._conn = client
     connector._hello = {"isWritablePrimary": True}
+    return client
+
+
+def _make_oplog_client(connector, first_doc, last_doc) -> MagicMock:
+    """
+    Build a mock MongoClient where client["local"]["oplog.rs"].find_one()
+    returns the supplied docs in order. Uses explicit __getitem__ assignment
+    so the same object is returned on every subscript access.
+    """
+    client = MagicMock()
+    connector._conn = client
+    connector._hello = {"isWritablePrimary": True}
+
+    client.admin.command.side_effect = lambda cmd, *a, **kw: (
+        {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
+    )
+
+    oplog_mock = MagicMock()
+    oplog_mock.find_one.side_effect = [first_doc, last_doc]
+
+    local_mock = MagicMock()
+    local_mock.__getitem__ = MagicMock(return_value=oplog_mock)
+
+    client.__getitem__ = MagicMock(return_value=local_mock)
+
+    cs_cm = MagicMock()
+    cs_cm.__enter__ = MagicMock(return_value=MagicMock())
+    cs_cm.__exit__ = MagicMock(return_value=False)
+    client.watch.return_value = cs_cm
+
     return client
 
 
@@ -111,26 +139,11 @@ class TestPermissions:
 
 class TestCDC:
     def test_replica_set_pass(self, connector):
-        client = _attach_mock_client(connector)
-
         now = datetime.now(timezone.utc)
         old = now - timedelta(hours=48)
-
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
-
-        client.admin.command.side_effect = lambda cmd, *a, **kw: (
-            {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
-        )
-
-        oplog_mock = MagicMock()
-        oplog_mock.find_one.side_effect = [first_doc, last_doc]
-        client.__getitem__.return_value.__getitem__.return_value = oplog_mock
-
-        cs_cm = MagicMock()
-        cs_cm.__enter__ = MagicMock(return_value=MagicMock())
-        cs_cm.__exit__ = MagicMock(return_value=False)
-        client.watch.return_value = cs_cm
+        _make_oplog_client(connector, first_doc, last_doc)
 
         results = connector.check_cdc()
         topo = next(r for r in results if r.name == "Replica set topology")
@@ -146,29 +159,11 @@ class TestCDC:
         assert "replica set" in topo.remediation.lower()
 
     def test_oplog_window_warn_when_short(self, connector):
-        client = _attach_mock_client(connector)
-
         now = datetime.now(timezone.utc)
         old = now - timedelta(hours=2)
-
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
-
-        client.admin.command.side_effect = lambda cmd, *a, **kw: (
-            {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
-        )
-
-        # Pin the oplog collection mock — MagicMock subscript returns a new
-        # object on every call, so we must reuse the same reference the
-        # connector will use: client["local"]["oplog.rs"]
-        oplog_mock = MagicMock()
-        oplog_mock.find_one.side_effect = [first_doc, last_doc]
-        client.__getitem__.return_value.__getitem__.return_value = oplog_mock
-
-        cs_cm = MagicMock()
-        cs_cm.__enter__ = MagicMock(return_value=MagicMock())
-        cs_cm.__exit__ = MagicMock(return_value=False)
-        client.watch.return_value = cs_cm
+        _make_oplog_client(connector, first_doc, last_doc)
 
         results = connector.check_cdc()
         oplog_result = next(r for r in results if r.name == "Oplog window")
@@ -177,26 +172,11 @@ class TestCDC:
         assert "replSetResizeOplog" in oplog_result.remediation
 
     def test_oplog_window_pass_when_sufficient(self, connector):
-        client = _attach_mock_client(connector)
-
         now = datetime.now(timezone.utc)
         old = now - timedelta(hours=48)
-
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
-
-        client.admin.command.side_effect = lambda cmd, *a, **kw: (
-            {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
-        )
-
-        oplog_mock = MagicMock()
-        oplog_mock.find_one.side_effect = [first_doc, last_doc]
-        client.__getitem__.return_value.__getitem__.return_value = oplog_mock
-
-        cs_cm = MagicMock()
-        cs_cm.__enter__ = MagicMock(return_value=MagicMock())
-        cs_cm.__exit__ = MagicMock(return_value=False)
-        client.watch.return_value = cs_cm
+        _make_oplog_client(connector, first_doc, last_doc)
 
         results = connector.check_cdc()
         oplog_result = next(r for r in results if r.name == "Oplog window")
