@@ -122,8 +122,9 @@ class TestCDC:
         client.admin.command.side_effect = lambda cmd, *a, **kw: (
             {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
         )
-        oplog = client["local"]["oplog.rs"]
-        oplog.find_one.side_effect = [first_doc, last_doc]
+        oplog_mock = MagicMock()
+        oplog_mock.find_one.side_effect = [first_doc, last_doc]
+        client.__getitem__.return_value.__getitem__.return_value = oplog_mock
 
         cs_cm = MagicMock()
         cs_cm.__enter__ = MagicMock(return_value=MagicMock())
@@ -156,8 +157,9 @@ class TestCDC:
         client.admin.command.side_effect = lambda cmd, *a, **kw: (
             {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
         )
-        oplog = client["local"]["oplog.rs"]
-        oplog.find_one.side_effect = [first_doc, last_doc]
+        oplog_mock = MagicMock()
+        oplog_mock.find_one.side_effect = [first_doc, last_doc]
+        client.__getitem__.return_value.__getitem__.return_value = oplog_mock
 
         cs_cm = MagicMock()
         cs_cm.__enter__ = MagicMock(return_value=MagicMock())
@@ -182,8 +184,9 @@ class TestCDC:
         client.admin.command.side_effect = lambda cmd, *a, **kw: (
             {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
         )
-        oplog = client["local"]["oplog.rs"]
-        oplog.find_one.side_effect = [first_doc, last_doc]
+        oplog_mock = MagicMock()
+        oplog_mock.find_one.side_effect = [first_doc, last_doc]
+        client.__getitem__.return_value.__getitem__.return_value = oplog_mock
 
         cs_cm = MagicMock()
         cs_cm.__enter__ = MagicMock(return_value=MagicMock())
@@ -217,3 +220,4 @@ class TestJDBC:
             results = connector.check_jdbc()
         assert results[0].status == Status.FAIL
         assert "pip install" in results[0].remediation
+
