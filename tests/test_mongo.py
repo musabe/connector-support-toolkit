@@ -122,6 +122,7 @@ class TestCDC:
         client.admin.command.side_effect = lambda cmd, *a, **kw: (
             {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
         )
+
         oplog_mock = MagicMock()
         oplog_mock.find_one.side_effect = [first_doc, last_doc]
         client.__getitem__.return_value.__getitem__.return_value = oplog_mock
@@ -148,15 +149,18 @@ class TestCDC:
         client = _attach_mock_client(connector)
 
         now = datetime.now(timezone.utc)
-        old = now - timedelta(hours=2)  # only 2 hours — below 24h threshold
+        old = now - timedelta(hours=2)
 
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
 
-        # Return rs status for replSetGetStatus, ignore other command calls
         client.admin.command.side_effect = lambda cmd, *a, **kw: (
             {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
         )
+
+        # Pin the oplog collection mock — MagicMock subscript returns a new
+        # object on every call, so we must reuse the same reference the
+        # connector will use: client["local"]["oplog.rs"]
         oplog_mock = MagicMock()
         oplog_mock.find_one.side_effect = [first_doc, last_doc]
         client.__getitem__.return_value.__getitem__.return_value = oplog_mock
@@ -184,6 +188,7 @@ class TestCDC:
         client.admin.command.side_effect = lambda cmd, *a, **kw: (
             {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
         )
+
         oplog_mock = MagicMock()
         oplog_mock.find_one.side_effect = [first_doc, last_doc]
         client.__getitem__.return_value.__getitem__.return_value = oplog_mock
@@ -220,4 +225,3 @@ class TestJDBC:
             results = connector.check_jdbc()
         assert results[0].status == Status.FAIL
         assert "pip install" in results[0].remediation
-
