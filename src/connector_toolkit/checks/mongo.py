@@ -276,8 +276,8 @@ class MongoConnector(BaseConnector):
         try:
             local_db = client["local"]
             oplog = local_db["oplog.rs"]
-            first = oplog.find_one(sort=[("$natural", pymongo.ASCENDING)])
-            last = oplog.find_one(sort=[("$natural", pymongo.DESCENDING)])
+            first = oplog.find_one(sort=[("$natural", 1)])   # 1  = ASCENDING
+            last = oplog.find_one(sort=[("$natural", -1)])  # -1 = DESCENDING
 
             if first and last:
                 first_ts = first["ts"].as_datetime()
