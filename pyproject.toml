@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "connector-support-toolkit"
+version = "1.1.0"
+description = "CLI tool to validate database connector readiness for PostgreSQL, MySQL, MongoDB, and Redshift"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+  { name = "Mustapha Abella" }
+]
+dependencies = [
+  "psycopg2-binary>=2.9",
+  "mysql-connector-python>=8.0",
+  "rich>=13.0",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+mongo    = ["pymongo[srv]>=4.0"]
+redshift = ["redshift-connector>=2.1"]
+dev      = ["pytest>=9.0", "pytest-mock"]
+
+[project.scripts]
+connector-check = "connector_toolkit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

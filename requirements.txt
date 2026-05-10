@@ -1,4 +1,15 @@
+# Install the package in editable mode with all dependencies:
+#   pip install -e ".[dev]"
+#
+# Or install individual extras:
+#   pip install -e ".[mongo]"       # adds pymongo
+#   pip install -e ".[redshift]"    # adds redshift-connector
+#   pip install -e ".[dev]"         # adds pytest
+#
+# Direct dependencies (for environments that don't use pyproject.toml):
 psycopg2-binary>=2.9
 mysql-connector-python>=8.0
 rich>=13.0
-pytest>=7.0
+pyyaml>=6.0
+pytest>=9.0
+pytest-mock

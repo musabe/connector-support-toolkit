@@ -1,72 +1,133 @@
+"""
+Tests for runner orchestration — all categories run, connectivity cascade,
+skip flag, db-type registry, unknown db-type error.
+Replaces the old test_runner.py (which imported from src.runner).
+"""
+from __future__ import annotations
+
 import pytest
 from unittest.mock import MagicMock, patch
 
-from src.models import CheckResult
-from src.runner import CheckRunner
+from connector_toolkit.models import Category, CheckResult, RunConfig, Status
+from connector_toolkit import runner
+from connector_toolkit.runner import EXIT_FAIL, EXIT_PASS, EXIT_WARN, exit_code
 
 
-def _make_checker_mock(connectivity_status='PASS'):
-    checker = MagicMock()
-    checker.check_connectivity.return_value = [
-        CheckResult('connectivity', 'TCP reachability', connectivity_status, ''),
-    ]
-    checker.check_permissions.return_value = [
-        CheckResult('permissions', 'Replication', 'PASS', ''),
-    ]
-    checker.check_cdc.return_value = [
-        CheckResult('cdc', 'wal_level', 'PASS', 'logical'),
-    ]
-    checker.check_jdbc.return_value = [
-        CheckResult('jdbc', 'Driver version', 'PASS', '2.9.9'),
-    ]
-    return checker
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _result(category: Category, status: Status) -> CheckResult:
+    return CheckResult(category=category, name="check", status=status, detail="")
 
 
-@patch('src.runner.PostgresChecker')
-def test_runner_runs_all_categories(MockChecker):
-    mock = _make_checker_mock()
-    MockChecker.return_value = mock
-    runner = CheckRunner('postgres', 'localhost', 5432, 'db', 'user', 'pass')
-    results = runner.run()
-    assert len(results) == 4
-    assert mock.check_connectivity.called
-    assert mock.check_permissions.called
-    assert mock.check_cdc.called
-    assert mock.check_jdbc.called
+def _config(**kwargs) -> RunConfig:
+    defaults = dict(
+        host="localhost", port=5432, db="db",
+        user="user", password="pass", db_type="postgres",
+    )
+    defaults.update(kwargs)
+    return RunConfig(**defaults)
 
 
-@patch('src.runner.PostgresChecker')
-def test_runner_skips_downstream_on_connectivity_fail(MockChecker):
-    mock = _make_checker_mock(connectivity_status='FAIL')
-    MockChecker.return_value = mock
-    runner = CheckRunner('postgres', 'localhost', 5432, 'db', 'user', 'pass')
-    results = runner.run()
-    skipped = [r for r in results if r.status == 'SKIP']
-    assert len(skipped) == 3
-    assert not mock.check_permissions.called
-    assert not mock.check_cdc.called
-    assert not mock.check_jdbc.called
+def _mock_connector(connectivity_status: Status = Status.PASS) -> MagicMock:
+    """Return a mock connector whose four check methods return single-item lists."""
+    m = MagicMock()
+    m.check_connectivity.return_value = [_result(Category.CONNECTIVITY, connectivity_status)]
+    m.check_permissions.return_value = [_result(Category.PERMISSIONS, Status.PASS)]
+    m.check_cdc.return_value       = [_result(Category.CDC, Status.PASS)]
+    m.check_jdbc.return_value      = [_result(Category.JDBC, Status.PASS)]
+    # skipped_category mirrors BaseConnector behaviour
+    m.skipped_category.side_effect = lambda cat: [_result(cat, Status.SKIP)]
+    return m
 
 
-@patch('src.runner.PostgresChecker')
-def test_runner_skip_flag_excludes_category(MockChecker):
-    mock = _make_checker_mock()
-    MockChecker.return_value = mock
-    runner = CheckRunner('postgres', 'localhost', 5432, 'db', 'user', 'pass', skip=['cdc'])
-    runner.run()
-    assert not mock.check_cdc.called
-    assert mock.check_permissions.called
+# ── Orchestration ─────────────────────────────────────────────────────────────
+
+class TestRunnerOrchestration:
+    def test_all_four_categories_run_on_pass(self):
+        mock = _mock_connector()
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config())
+
+        mock.check_connectivity.assert_called_once()
+        mock.check_permissions.assert_called_once()
+        mock.check_cdc.assert_called_once()
+        mock.check_jdbc.assert_called_once()
+        assert len(report.results) == 4
+
+    def test_connectivity_fail_skips_downstream(self):
+        mock = _mock_connector(connectivity_status=Status.FAIL)
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config())
+
+        mock.check_permissions.assert_not_called()
+        mock.check_cdc.assert_not_called()
+        mock.check_jdbc.assert_not_called()
+
+        skipped = [r for r in report.results if r.status == Status.SKIP]
+        assert len(skipped) == 3
+
+    def test_skip_flag_excludes_category(self):
+        mock = _mock_connector()
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config(skip=[Category.CDC]))
+
+        mock.check_cdc.assert_not_called()
+        mock.check_permissions.assert_called_once()
+        skipped = [r for r in report.results if r.status == Status.SKIP]
+        assert any(r.category == Category.CDC for r in skipped)
+
+    def test_multiple_skip_categories(self):
+        mock = _mock_connector()
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            runner.run(_config(skip=[Category.CDC, Category.JDBC]))
+
+        mock.check_cdc.assert_not_called()
+        mock.check_jdbc.assert_not_called()
+        mock.check_permissions.assert_called_once()
+
+    def test_mysql_connector_selected_for_mysql_db_type(self):
+        mock = _mock_connector()
+        mysql_cls = MagicMock(return_value=mock)
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"mysql": mysql_cls}):
+            runner.run(_config(db_type="mysql", port=3306))
+        mysql_cls.assert_called_once()
+
+    def test_unknown_db_type_exits(self):
+        with pytest.raises(SystemExit) as exc:
+            runner.run(_config(db_type="oracle"))
+        assert exc.value.code == 1
+
+    def test_summary_counts_correct(self):
+        mock = _mock_connector()
+        mock.check_cdc.return_value = [_result(Category.CDC, Status.FAIL)]
+        mock.check_jdbc.return_value = [_result(Category.JDBC, Status.WARN)]
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config())
+
+        assert report.summary.passed == 2
+        assert report.summary.failed == 1
+        assert report.summary.warned == 1
 
 
-@patch('src.runner.MySQLChecker')
-def test_runner_uses_mysql_checker(MockChecker):
-    mock = _make_checker_mock()
-    MockChecker.return_value = mock
-    runner = CheckRunner('mysql', 'localhost', 3306, 'db', 'user', 'pass')
-    runner.run()
-    MockChecker.assert_called_once_with('localhost', 3306, 'db', 'user', 'pass')
+# ── Exit codes ────────────────────────────────────────────────────────────────
 
+class TestExitCode:
+    def test_all_pass_returns_0(self):
+        mock = _mock_connector()
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config())
+        assert exit_code(report) == EXIT_PASS
 
-def test_runner_raises_on_unknown_db_type():
-    with pytest.raises(ValueError, match='Unknown db_type'):
-        CheckRunner('oracle', 'localhost', 1521, 'db', 'user', 'pass')
+    def test_any_fail_returns_1(self):
+        mock = _mock_connector()
+        mock.check_cdc.return_value = [_result(Category.CDC, Status.FAIL)]
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config())
+        assert exit_code(report) == EXIT_FAIL
+
+    def test_warn_only_returns_2(self):
+        mock = _mock_connector()
+        mock.check_jdbc.return_value = [_result(Category.JDBC, Status.WARN)]
+        with patch.dict(runner.CONNECTOR_REGISTRY, {"postgres": lambda cfg: mock}):
+            report = runner.run(_config())
+        assert exit_code(report) == EXIT_WARN

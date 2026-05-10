@@ -1,0 +1,79 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+wheels/
+sdist/
+.eggs/
+
+# Editable install artifacts
+*.egg-link
+pip-wheel-metadata/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# ── Secrets and config ────────────────────────────────────────────────────────
+# Commit toolkit.example.yml but never the live config with real credentials
+toolkit.yml
+*.env
+.env
+
+# ── Reports ───────────────────────────────────────────────────────────────────
+# Sample reports in examples/ and reports/ are committed;
+# ignore any generated JSON reports dropped at the root or in reports/
+reports/*.json
+*.report.json
+
+# ── Backup files ──────────────────────────────────────────────────────────────
+*.bak
+*.orig
+src/connector_check.py.bak
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encdata
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# ── Editors ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Keep docker-compose.yml committed; ignore override files
+docker-compose.override.yml
+
+# ── Docs build ────────────────────────────────────────────────────────────────
+docs/_build/
+site/

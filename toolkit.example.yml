@@ -1,0 +1,94 @@
+# connector-support-toolkit — configuration file
+#
+# Usage:
+#   python -m src.connector_check --config toolkit.yml
+#   python -m src.connector_check --config toolkit.yml --db-type mysql  # CLI flags override file
+#
+# Environment variable interpolation:
+#   Any value (or part of a value) can reference an env var using ${VAR_NAME}.
+#   A default can be supplied with ${VAR_NAME:-default}.
+#   The loader raises ConfigError if a referenced variable is not set and has no default.
+#
+# Examples:
+#   password: ${DB_PASSWORD}             # required env var — errors if unset
+#   host:     ${DB_HOST:-localhost}      # optional env var — falls back to "localhost"
+#   port:     ${DB_PORT:-5432}           # numeric fields are cast after interpolation
+#
+# Precedence (highest → lowest):
+#   1. Explicit CLI flags  (--host, --port, …)
+#   2. This config file
+#   3. Built-in defaults  (timeout: 10, skip: [])
+
+
+# ── Connection ────────────────────────────────────────────────────────────────
+
+# Hostname or IP of the database server.
+host: ${DB_HOST:-localhost}
+
+# TCP port. Interpolated strings are cast to int automatically.
+port: ${DB_PORT:-5432}
+
+# Database name to connect to.
+db: ${DB_NAME:-mydb}
+
+# Database user. Avoid hardcoding — prefer an env var.
+user: ${DB_USER:-myuser}
+
+# Password. Always use an env var here; never commit a plaintext password.
+password: ${DB_PASSWORD}
+
+# Database type. One of: postgres, mysql
+# Can be overridden per-run with --db-type on the CLI.
+db_type: postgres
+
+
+# ── Run behaviour ─────────────────────────────────────────────────────────────
+
+# Connection + query timeout in seconds. Default: 10.
+timeout: 10
+
+# Categories to skip. Accepted values: connectivity, permissions, cdc, jdbc.
+# Useful when you know a category will fail for known reasons (e.g. no CDC yet).
+# Leave as an empty list to run all checks.
+skip: []
+# skip:
+#   - jdbc          # skip JDBC check in environments without a local driver
+
+# Write a JSON report to this path instead of printing to the terminal.
+# Omit (or set to null) for terminal output.
+output_file: null
+# output_file: ${REPORT_DIR:-reports}/report.json
+
+
+# ── Examples for common setups ────────────────────────────────────────────────
+#
+# Local Docker (matches the docker-compose dev environment):
+#
+#   host: localhost
+#   port: 5435
+#   db:   test
+#   user: demo
+#   password: demo
+#   db_type: postgres
+#
+# RDS PostgreSQL via env vars (CI / CD pipeline):
+#
+#   host:     ${RDS_HOST}
+#   port:     ${RDS_PORT:-5432}
+#   db:       ${RDS_DB}
+#   user:     ${RDS_USER}
+#   password: ${RDS_PASSWORD}
+#   db_type:  postgres
+#   timeout:  20
+#   output_file: ${REPORT_DIR:-reports}/rds-check.json
+#
+# MySQL staging:
+#
+#   host:     ${MYSQL_HOST:-staging-db.internal}
+#   port:     ${MYSQL_PORT:-3306}
+#   db:       ${MYSQL_DB}
+#   user:     ${MYSQL_USER}
+#   password: ${MYSQL_PASSWORD}
+#   db_type:  mysql
+#   skip:
+#     - jdbc
