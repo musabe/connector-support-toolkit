@@ -8,6 +8,8 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Status](https://img.shields.io/badge/status-active-brightgreen?style=flat-square)
 ![Tests](https://img.shields.io/badge/tests-174%20passed-brightgreen?style=flat-square)
+![CI](https://github.com/musabe/connector-support-toolkit/actions/workflows/ci.yml/badge.svg)
+![Integration](https://github.com/musabe/connector-support-toolkit/actions/workflows/integration.yml/badge.svg)
 
 ---
 
@@ -26,7 +28,42 @@ a remediation hint showing the exact SQL or config change needed.
 
 ---
 
-## Tech stack
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  cli.py  —  arg parsing · --config · run · compare      │
+└───────────────────────┬─────────────────────────────────┘
+                        │ RunConfig
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  runner.py  —  orchestration · skip logic · exit codes  │
+└──────────────┬──────────────────────────┬───────────────┘
+               │ loads                    │ loads
+               ▼                          ▼
+┌──────────────────────┐    ┌─────────────────────────────┐
+│  checks/             │    │  reporters/                 │
+│  ├── postgres.py     │    │  ├── terminal.py  (rich)    │
+│  ├── mysql.py        │    │  ├── json_report.py         │
+│  ├── mongo.py        │    │  └── diff_reporter.py       │
+│  └── redshift.py     │    └──────────────┬──────────────┘
+│                      │                   │
+│  BaseConnector ABC   │                   │
+│  check_connectivity()│                   │
+│  check_permissions() │                   │
+│  check_cdc()         │                   │
+│  check_jdbc()        │                   │
+└──────────┬───────────┘                   │
+           │ []CheckResult                 │
+           └───────────────────────────────┘
+```
+
+Each `CheckResult` carries a `category`, `name`, `status` (PASS / WARN / FAIL / SKIP),
+and a `remediation` hint shown beneath every failure. Adding a new database target
+means one new file in `checks/` and one line in `runner.CONNECTOR_REGISTRY` —
+nothing else changes.
+
+
 
 - **Language** — Python 3.10+
 - **Databases** — PostgreSQL 15, MySQL 8.0, MongoDB 6+ (replica set), Amazon Redshift

@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package and run tests
+        run: |
+          pip install -e ".[dev]"
+          pytest tests/ -v --tb=short
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          python - <<'EOF'
+          import re, os
+          text = open("CHANGELOG.md").read()
+          # Find the first non-Unreleased version block
+          match = re.search(
+              r"## \[\d+\.\d+\.\d+\].*?\n(.*?)(?=\n## \[|\Z)",
+              text, re.DOTALL
+          )
+          notes = match.group(1).strip() if match else "See CHANGELOG.md for details."
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"notes<<EOF\n{notes}\nEOF\n")
+          EOF
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: connector-support-toolkit ${{ github.ref_name }}
+          body: |
+            ## What's changed
+
+            ${{ steps.changelog.outputs.notes }}
+
+            **Full changelog:** [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}

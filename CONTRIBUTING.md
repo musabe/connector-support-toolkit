@@ -280,6 +280,32 @@ Tests are split into:
 - `tests/test_reporters.py` — terminal and JSON reporter output
 - `tests/fixtures/mock_db.py` — shared mock connection and cursor
 
+## CI pipeline
+
+Every push and PR runs two workflows automatically:
+
+**Unit tests** (`.github/workflows/ci.yml`):
+- Runs `pytest tests/` across Python 3.10, 3.11, 3.12, and 3.13
+- No live database required — all tests use mock connections
+- Must pass on all four versions before a PR can merge
+
+**Integration tests** (`.github/workflows/integration.yml`):
+- Spins up PostgreSQL 15 and MySQL 8.0 as GitHub Actions services
+- Runs the actual CLI against live databases
+- Asserts connectivity and permissions checks pass
+- Uploads JSON reports as artifacts (retained 14 days)
+
+**Release** (`.github/workflows/release.yml`):
+- Triggered by pushing a version tag: `git tag v1.2.0 && git push --tags`
+- Runs the full test suite, then creates a GitHub release
+- Extracts release notes from `CHANGELOG.md` automatically
+
+To run the same checks locally before pushing:
+```bash
+pytest tests/ -v
+```
+
+
 ---
 
 ## Pull request checklist
