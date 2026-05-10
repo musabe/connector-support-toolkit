@@ -119,7 +119,9 @@ class TestCDC:
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
 
-        client.admin.command.return_value = {"ok": 1, "set": "rs0"}
+        client.admin.command.side_effect = lambda cmd, *a, **kw: (
+            {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
+        )
         oplog = client["local"]["oplog.rs"]
         oplog.find_one.side_effect = [first_doc, last_doc]
 
@@ -150,7 +152,10 @@ class TestCDC:
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
 
-        client.admin.command.return_value = {"ok": 1, "set": "rs0"}
+        # Return rs status for replSetGetStatus, ignore other command calls
+        client.admin.command.side_effect = lambda cmd, *a, **kw: (
+            {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
+        )
         oplog = client["local"]["oplog.rs"]
         oplog.find_one.side_effect = [first_doc, last_doc]
 
@@ -174,7 +179,9 @@ class TestCDC:
         first_doc = {"ts": MagicMock(as_datetime=MagicMock(return_value=old))}
         last_doc  = {"ts": MagicMock(as_datetime=MagicMock(return_value=now))}
 
-        client.admin.command.return_value = {"ok": 1, "set": "rs0"}
+        client.admin.command.side_effect = lambda cmd, *a, **kw: (
+            {"ok": 1, "set": "rs0"} if cmd == "replSetGetStatus" else {}
+        )
         oplog = client["local"]["oplog.rs"]
         oplog.find_one.side_effect = [first_doc, last_doc]
 
