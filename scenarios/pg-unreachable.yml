@@ -1,0 +1,31 @@
+# Scenario: pg-unreachable
+# Incident type: Connector cannot connect — network or firewall issue
+#
+# Symptom: Pipeline fails immediately, no data flows
+# Root cause: Wrong host, wrong port, or firewall blocking the connection
+# Fix: Verify host/port, check security group rules, try: nc -zv <host> <port>
+#
+# Expected results:
+#   FAIL  TCP reachability            ← key failure
+#   SKIP  Authenticated connect       ← skipped (connectivity failed)
+#   SKIP  SSL
+#   SKIP  Replication privilege
+#   SKIP  Database read access
+#   SKIP  Superuser status
+#   SKIP  wal_level
+#   SKIP  Replication slots
+#   SKIP  wal_sender_timeout
+#   SKIP  Driver version
+#
+# No Docker container needed — intentionally points at a non-existent host.
+# Run:
+#   python -m src.connector_check --config scenarios/pg-unreachable.yml
+
+host:     nonexistent-db-host.internal
+port:     5432
+db:       test
+user:     demo
+password: demo
+db_type:  postgres
+timeout:  5
+skip:     []

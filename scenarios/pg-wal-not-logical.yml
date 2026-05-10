@@ -1,0 +1,30 @@
+# Scenario: pg-wal-not-logical
+# Incident type: Logical replication fails — WAL level misconfigured
+#
+# Symptom: Connector cannot create replication slot or subscription
+# Root cause: wal_level is set to 'replica' instead of 'logical'
+# Fix: ALTER SYSTEM SET wal_level = logical; -- requires PostgreSQL restart
+#
+# Expected results:
+#   PASS  TCP reachability
+#   PASS  Authenticated connect
+#   PASS  SSL
+#   PASS  Replication privilege
+#   PASS  Superuser status
+#   PASS  Database read access
+#   FAIL  wal_level                   ← key failure: wal_level=replica
+#   PASS  Replication slots
+#   PASS  wal_sender_timeout
+#
+# Run:
+#   docker compose -f docker/docker-compose-scenarios.yml up -d
+#   python -m src.connector_check --config scenarios/pg-wal-not-logical.yml
+
+host:     ${PG_HOST:-localhost}
+port:     ${PG_WAL_PORT:-5437}
+db:       ${PG_DB:-test}
+user:     demo
+password: demo
+db_type:  postgres
+timeout:  10
+skip:     []

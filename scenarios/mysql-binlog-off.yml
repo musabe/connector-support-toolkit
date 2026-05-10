@@ -1,0 +1,31 @@
+# Scenario: mysql-binlog-off
+# Incident type: CDC impossible — binary logging not enabled
+#
+# Symptom: Connector reports log_bin=OFF, refuses to start
+# Root cause: MySQL was started without binary logging configured
+# Fix: Add to my.cnf: log_bin=/var/log/mysql/mysql-bin.log
+#      Requires MySQL restart
+#
+# Expected results:
+#   PASS  TCP reachability
+#   PASS  Authenticated connect
+#   PASS  SSL
+#   PASS  Replication privilege
+#   PASS  Database read access
+#   FAIL  log_bin                     ← key failure: log_bin=OFF
+#   PASS  binlog_format               ← may vary
+#   PASS  binlog_row_image
+#   WARN  gtid_mode
+#
+# Run:
+#   docker compose -f docker/docker-compose-scenarios.yml up -d
+#   python -m src.connector_check --config scenarios/mysql-binlog-off.yml
+
+host:     ${MYSQL_HOST:-localhost}
+port:     ${MYSQL_NOLOG_PORT:-3307}
+db:       test
+user:     demo
+password: demo
+db_type:  mysql
+timeout:  10
+skip:     []

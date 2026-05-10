@@ -1,0 +1,31 @@
+# Scenario: mysql-wrong-binlog-format
+# Incident type: CDC produces unreliable data — wrong binlog format
+#
+# Symptom: Connector starts but row changes are incomplete or missing
+# Root cause: binlog_format=STATEMENT captures SQL, not row values
+# Fix: SET GLOBAL binlog_format = 'ROW';
+#      Add binlog_format=ROW to my.cnf to persist across restarts
+#
+# Expected results:
+#   PASS  TCP reachability
+#   PASS  Authenticated connect
+#   PASS  SSL
+#   PASS  Replication privilege
+#   PASS  Database read access
+#   PASS  log_bin
+#   FAIL  binlog_format               ← key failure: binlog_format=STATEMENT
+#   PASS  binlog_row_image
+#   PASS  gtid_mode
+#
+# Run:
+#   docker compose -f docker/docker-compose-scenarios.yml up -d
+#   python -m src.connector_check --config scenarios/mysql-wrong-binlog-format.yml
+
+host:     ${MYSQL_HOST:-localhost}
+port:     ${MYSQL_BADFORMAT_PORT:-3309}
+db:       test
+user:     demo
+password: demo
+db_type:  mysql
+timeout:  10
+skip:     []

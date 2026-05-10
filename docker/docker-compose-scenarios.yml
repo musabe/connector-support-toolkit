@@ -1,0 +1,135 @@
+version: "3.8"
+
+# Scenario containers for incident testing.
+# Each service deliberately misconfigures something so the tool produces
+# expected FAILs. Use alongside the scenario YAML configs in scenarios/.
+#
+# Start all:
+#   docker compose -f docker/docker-compose-scenarios.yml up -d
+#
+# Stop all:
+#   docker compose -f docker/docker-compose-scenarios.yml down
+
+services:
+
+  # ── PostgreSQL scenarios ────────────────────────────────────────────────────
+
+  # Scenario: pg-no-replication
+  # User 'norepl' exists but has no REPLICATION privilege
+  pg-no-replication:
+    image: postgres:15
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: test
+    command: >
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=10
+      -c max_wal_senders=10
+    volumes:
+      - ./init/pg-no-replication.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Scenario: pg-wal-not-logical
+  # wal_level is deliberately set to 'replica' instead of 'logical'
+  pg-wal-not-logical:
+    image: postgres:15
+    ports:
+      - "5437:5432"
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: test
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_replication_slots=10
+      -c max_wal_senders=10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MySQL scenarios ─────────────────────────────────────────────────────────
+
+  # Scenario: mysql-binlog-off
+  # Binary logging is not configured — log_bin=OFF
+  mysql-binlog-off:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo
+      MYSQL_DATABASE: test
+    command: >
+      --skip-log-bin
+      --gtid-mode=OFF
+      --enforce-gtid-consistency=OFF
+    volumes:
+      - ./init/mysql-binlog-off.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "demo", "-pdemo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Scenario: mysql-no-replication
+  # User 'norepl' exists but has no REPLICATION SLAVE privilege
+  mysql-no-replication:
+    image: mysql:8.0
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo
+      MYSQL_DATABASE: test
+    command: >
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --binlog-row-image=FULL
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --server-id=3308
+    volumes:
+      - ./init/mysql-no-replication.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "demo", "-pdemo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Scenario: mysql-wrong-binlog-format
+  # binlog_format=STATEMENT instead of ROW
+  mysql-wrong-binlog-format:
+    image: mysql:8.0
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo
+      MYSQL_DATABASE: test
+    command: >
+      --log-bin=mysql-bin
+      --binlog-format=STATEMENT
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --server-id=3309
+    volumes:
+      - ./init/mysql-wrong-format.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "demo", "-pdemo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20

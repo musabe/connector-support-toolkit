@@ -1,0 +1,29 @@
+# Scenario: pg-no-replication
+# Incident type: CDC connector fails to start — user not allowed to replicate
+#
+# Symptom: Connector reports "user does not have REPLICATION privilege"
+# Root cause: The database user was created without REPLICATION role
+# Fix: ALTER ROLE <user> REPLICATION;
+#
+# This scenario connects as 'norepl' — a user with no replication privilege.
+# Expected results:
+#   PASS  TCP reachability
+#   PASS  Authenticated connect
+#   PASS  SSL
+#   FAIL  Replication privilege       ← key failure
+#   WARN  Superuser status
+#   PASS  Database read access
+#   FAIL  wal_level                   ← cascades because permissions failed
+#
+# Run:
+#   docker compose -f docker/docker-compose-scenarios.yml up -d
+#   python -m src.connector_check --config scenarios/pg-no-replication.yml
+
+host:     ${PG_HOST:-localhost}
+port:     ${PG_SCENARIO_PORT:-5436}
+db:       ${PG_DB:-test}
+user:     norepl
+password: norepl
+db_type:  postgres
+timeout:  10
+skip:     []

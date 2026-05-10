@@ -1,0 +1,15 @@
+# Scenario: mysql-all-pass
+# Description: Healthy MySQL instance — all checks should pass.
+#
+# Run:
+#   docker compose -f docker/docker-compose.yml up -d
+#   python -m src.connector_check --config scenarios/mysql-all-pass.yml
+
+host:     ${MYSQL_HOST:-localhost}
+port:     ${MYSQL_PORT:-3306}
+db:       ${MYSQL_DB:-test}
+user:     ${MYSQL_USER:-demo}
+password: ${MYSQL_PASSWORD:-demo}
+db_type:  mysql
+timeout:  10
+skip:     []

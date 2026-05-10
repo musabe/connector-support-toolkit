@@ -1,0 +1,16 @@
+# Scenario: pg-all-pass
+# Description: Healthy PostgreSQL instance — all checks should pass.
+# Use this as the baseline to confirm the tool works before testing failures.
+#
+# Run:
+#   docker compose -f docker/docker-compose.yml up -d
+#   python -m src.connector_check --config scenarios/pg-all-pass.yml
+
+host:     ${PG_HOST:-localhost}
+port:     ${PG_PORT:-5435}
+db:       ${PG_DB:-test}
+user:     ${PG_USER:-demo}
+password: ${PG_PASSWORD:-demo}
+db_type:  postgres
+timeout:  10
+skip:     []

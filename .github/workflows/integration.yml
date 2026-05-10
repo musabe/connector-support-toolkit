@@ -172,3 +172,119 @@ jobs:
           name: ci-mysql-report
           path: reports/ci-mysql.json
           retention-days: 14
+
+  scenario-tests:
+    name: Incident scenario tests
+    runs-on: ubuntu-latest
+
+    services:
+      # Baseline Postgres (also used by postgres-integration job)
+      postgres-baseline:
+        image: postgres:15
+        env:
+          POSTGRES_USER: demo
+          POSTGRES_PASSWORD: demo
+          POSTGRES_DB: test
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U demo -d test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Scenario: pg-no-replication (port 5436)
+      pg-no-replication:
+        image: postgres:15
+        env:
+          POSTGRES_USER: demo
+          POSTGRES_PASSWORD: demo
+          POSTGRES_DB: test
+        ports:
+          - 5436:5432
+        options: >-
+          --health-cmd "pg_isready -U demo -d test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Scenario: pg-wal-not-logical (port 5437)
+      pg-wal-not-logical:
+        image: postgres:15
+        env:
+          POSTGRES_USER: demo
+          POSTGRES_PASSWORD: demo
+          POSTGRES_DB: test
+        ports:
+          - 5437:5432
+        options: >-
+          --health-cmd "pg_isready -U demo -d test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Baseline MySQL (also used by mysql-integration job)
+      mysql-baseline:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_USER: demo
+          MYSQL_PASSWORD: demo
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -u demo -pdemo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package
+        run: pip install -e ".[dev]"
+
+      - name: Configure pg-no-replication scenario
+        env:
+          PGPASSWORD: demo
+        run: |
+          psql -h localhost -p 5435 -U demo -d test \
+            -c "ALTER SYSTEM SET wal_level = logical;" || true
+          psql -h localhost -p 5436 -U demo -d test \
+            -c "CREATE USER norepl WITH PASSWORD 'norepl';" \
+            -c "GRANT CONNECT ON DATABASE test TO norepl;" \
+            -c "GRANT USAGE ON SCHEMA public TO norepl;" || true
+
+      - name: Configure pg-wal-not-logical scenario
+        env:
+          PGPASSWORD: demo
+        run: |
+          psql -h localhost -p 5437 -U demo -d test \
+            -c "ALTER SYSTEM SET wal_level = replica;" || true
+
+      - name: Configure MySQL baseline
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -proot \
+            -e "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'demo'@'%';
+                SET GLOBAL binlog_format = 'ROW';
+                SET GLOBAL binlog_row_image = 'FULL';
+                FLUSH PRIVILEGES;" || true
+
+      - name: Run scenario tests
+        run: pytest tests/test_scenarios.py -v --tb=short
+
+      - name: Upload scenario reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-reports
+          path: reports/
+          retention-days: 14
